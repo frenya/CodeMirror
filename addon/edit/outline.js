@@ -71,7 +71,7 @@
 })(function(CodeMirror) {
   "use strict";
 
-  var listRE = /^(\s*)(>[> ]*|[*+-]\s|(\d+)([.)]))(\s*)/,
+  var listRE = /^(\s*)(>[> ]*|[*+-]|(\d+)([.)]))(\s+)/,
       emptyIndentedListRE = /^(\s+)(>[> ]*|[*+-]|(\d+)[.)])(\s*)$/,
       emptyListRE = /^(>[> ]*|[*+-]|(\d+)[.)])(\s*)$/,
       unorderedListRE = /[*+-]\s/,
@@ -226,10 +226,8 @@
         }
         else {
             var indent = match[1], after = match[5];
-            var bullet = unorderedListRE.test(match[2]) || match[2].indexOf(">") >= 0
-            ? match[2]
-            : (parseInt(match[3], 10) + 1) + match[4];
-
+            var bullet = isNaN(match[3]) ? match[2] : (parseInt(match[3], 10) + 1) + match[4];
+            
             return "\n" + indent + bullet + after;
         }
         
@@ -307,8 +305,8 @@
         
         var state = getStateAtLine(lineStart, cm);
         var currentDepth = state.listDepth;
-        var currentOrder = resetNumbering ? 1 : state.listOrder;
-
+        var currentOrder = (state.listOrder !== null && resetNumbering) ? 1 : state.listOrder;
+        
         // Init cycle variables
         var nextLine = lineStart;
         var nextOrder = currentOrder;
@@ -319,12 +317,12 @@
             // console.log("Comparing depth", state.listDepth, currentDepth);
             if (state.listDepth === currentDepth) {
                 // If listOrder is filled (i.e. numbered list), make sure it has the right ordinal
-                if (state.listOrder != null && state.listOrder !== nextOrder) {
+                if (/*state.listOrder != null &&*/ state.listOrder !== nextOrder) {
                     // console.log("Should adjust numbered prefix at line " + nextLine + " from " + state.listOrder + " to " + nextOrder);
                     resetNumberedPrefix(cm, nextLine, nextOrder);
                 }
                 nextLine++;
-                nextOrder++;
+                if (nextOrder !== null) nextOrder++;
             }
             else if (state.listDepth > currentDepth) {
                 // console.log(">>>");
@@ -347,8 +345,17 @@
         var lineText = cm.getLine(lineNumber), match = listRE.exec(lineText);
         
         // Find the range of the number in prefix and replace it
-        var prefixPos = match[1].length, prefixLen = match[3].length;
-        cm.replaceRange("" + newPrefix, 
+        var prefixPos = match[1].length, after = match[5];
+        var prefixLen = match[2].length;
+        var bullet = null;
+        if (newPrefix) {
+            bullet = newPrefix + (match[4] == ")" ? ")" : ".");
+        }
+        else {
+            bullet = "-";
+        }
+        
+        cm.replaceRange(bullet, 
                         { line: lineNumber, ch: prefixPos }, 
                         { line: lineNumber, ch: prefixPos + prefixLen });
         
