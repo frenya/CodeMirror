@@ -212,31 +212,14 @@
     */
     function newLineReplacementForRange(range, cm) {
         
-        function getStateAt(pos) {
-            
-            var token = cm.getTokenAt(pos, true);
-            console.log(pos, token);
-            
-            var state = token.state;
-            
-            // This is something added by overlay.js
-            if (state.overlay) {
-                console.log("Checking base state for overlay state");
-                state = state.base;
-            }
-            
-            return state;
-            
-        }
-
         console.log(range);
         
         // Using functions here instead of head/anchor to make sure fromPos <= toPos
         var fromPos = range.from();
         var toPos = range.to();
 
-        var fromState = getStateAt(fromPos);
-        var toState = getStateAt(toPos);
+        var fromState = getStateAt(fromPos, cm);
+        var toState = getStateAt(toPos, cm);
         
         console.log(fromState, toState);
 
@@ -288,5 +271,27 @@
         }
         
     };
+
+    // --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    // Supporting functions
+
+    // TODO: Minify
+    function getStateAt(pos, cm) {
+
+        var token = cm.getTokenAt(pos, true);
+        // console.log(pos, token);
+
+        var state = token.state;
+
+        // This is something added by overlay.js
+        if (state.overlay) {
+            // console.log("Checking base state for overlay state");
+            state = state.base;
+        }
+
+        return state;
+
+    }
+
 
 });
