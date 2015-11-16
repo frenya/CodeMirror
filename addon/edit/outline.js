@@ -240,43 +240,41 @@
         // doc.listSelections():
         // Retrieves a list of all current selections. These will always be sorted, and never overlap (overlapping selections are merged). 
         // Each object in the array contains anchor and head properties referring to {line, ch} objects.
-        var ranges = cm.listSelections(), replacements = [];
+        var ranges = cm.listSelections();
+        
+        // Only handle a single empty selection (too many caveats otherwise)
+        if (ranges.length > 1 || !ranges[0].empty()) return CodeMirror.Pass;
+        
+        var pos = ranges[0].head;
 
-        // Go over all the selected lines
-        for (var i = 0; i < ranges.length; i++) {
-            // First line of the selection
-            var pos = ranges[i].head;
+        // Check the state AFTER the line
+        var eolState = getStateAtLine(pos.line, cm);
+        var inList = eolState.list !== false;
+        var inQuote = eolState.quote !== 0;
 
-            // Check the state AFTER the line
-            var eolState = cm.getStateAfter(pos.line);
-            var inList = eolState.list !== false;
-            var inQuote = eolState.quote !== 0;
+        // Get the line's text and check if it's a list
+        var line = cm.getLine(pos.line), match = listRE.exec(line);
 
-            // Debug
-            var eolStatePrev = cm.getStateAfter(pos.line - 1);
-            console.log("Indentation: " + eolStatePrev.indentation + ", diff: " + eolStatePrev.indentationDiff + ", indent: " + eolStatePrev.indent);
-            console.log(eolStatePrev);
+        if (match) {
+            console.log("Indentation diff " + eolState.indentationDiff);
             console.log(eolState);
-
-            // Get the line's text and check if it's a list
-            var line = cm.getLine(pos.line), match = listRE.exec(line);
-
-            if (match) {
-                console.log("Increasing list indent");
-                cm.execCommand("indentMore");
-                
-                // Readjust numbered prefixes
-                var anchorLine = findListAnchor(cm, pos.line);
-                console.log("Adjusting prefixes from " + anchorLine);
-                adjustNumberedPrefixes(cm, anchorLine, false);
-                
+            if (eolState.indentationDiff > 0) {
+                console.log("TODO: Change bullet type");
                 return;
             }
-            else return CodeMirror.Pass;
-        }
+            else {
+                cm.indentLine(pos.line, "add");
 
-        cm.replaceSelections(replacements);
-        
+                // Readjust numbered prefixes
+                var anchorLine = findListAnchor(cm, pos.line - 1);
+                console.log("Adjusting prefixes from " + anchorLine);
+                adjustNumberedPrefixes(cm, anchorLine, false);
+
+                return;
+            }
+        }
+        else return CodeMirror.Pass;
+
     };
 
 
