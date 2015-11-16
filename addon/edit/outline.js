@@ -285,29 +285,17 @@
     // --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     // Supporting functions
 
-    // TODO: Minify
     function getStateAt(pos, cm) {
 
-        var token = cm.getTokenAt(pos, true);
-        // console.log(pos, token);
-
-        var state = token.state;
-
-        // This is something added by overlay.js
-        if (state.overlay) {
-            // console.log("Checking base state for overlay state");
-            state = state.base;
-        }
-
-        return state;
+        var state = cm.getTokenAt(pos, true).state;
+        return state.overlay ? state.base : state;
 
     }
 
     function getStateAtLine(line, cm) {
         
         var state = cm.getStateAfter(line, true);
-        if (state.overlay) state = state.base;
-        return state;
+        return state.overlay ? state.base : state;
 
     }
     
