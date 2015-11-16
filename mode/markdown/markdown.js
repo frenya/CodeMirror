@@ -772,12 +772,21 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         state.trailingSpaceNewLine = false;
 
         state.f = state.block;
+          
+        // Count the number of spaces at the beginning, exanding tabs to 4 spaces
         var indentation = stream.match(/^\s*/, true)[0].replace(/\t/g, '    ').length;
+          
+        // Calculate the indentation difference against previous line
+        // can be 0, 4 or -4*n
         var difference = Math.floor((indentation - state.indentation) / 4) * 4;
         if (difference > 4) difference = 4;
+          
+        // Set indentation and indentationDiff
         var adjustedIndentation = state.indentation + difference;
         state.indentationDiff = adjustedIndentation - state.indentation;
         state.indentation = adjustedIndentation;
+          
+        // Whitespaces (if any) has token type NULL
         if (indentation > 0) return null;
       }
       return state.f(stream, state);
