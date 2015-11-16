@@ -175,5 +175,118 @@
 
         cm.replaceSelections(replacements);
     };
+    
+    
+    // --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    // Outline CRLF
+
+    CodeMirror.commands.outlineMarkdownListNewLine = function(cm) {
+
+        if (cm.getOption("disableInput")) return CodeMirror.Pass;
+
+        // doc.listSelections():
+        // Retrieves a list of all current selections. These will always be sorted, and never overlap (overlapping selections are merged). 
+        // Each object in the array contains anchor and head properties referring to {line, ch} objects.
+        var ranges = cm.listSelections(), replacements = [];
+        // console.log(ranges);
+
+        // Go over all the selected lines
+        for (var i = 0; i < ranges.length; i++) {
+            
+            var replacementString = newLineReplacementForRange(ranges[i], cm);
+            if (replacementString == undefined) {
+                cm.execCommand("newlineAndIndent");
+                return;
+            }
+            
+            replacements[i] = replacementString;
+            
+        }
+        
+        cm.replaceSelections(replacements);
+        
+    }
+    
+    /**
+    * @param {Range} range One of the selection ranges
+    */
+    function newLineReplacementForRange(range, cm) {
+        
+        function getStateAt(pos) {
+            
+            var token = cm.getTokenAt(pos, true);
+            console.log(pos, token);
+            
+            var state = token.state;
+            
+            // This is something added by overlay.js
+            if (state.overlay) {
+                console.log("Checking base state for overlay state");
+                state = state.base;
+            }
+            
+            return state;
+            
+        }
+
+        console.log(range);
+        
+        // Using functions here instead of head/anchor to make sure fromPos <= toPos
+        var fromPos = range.from();
+        var toPos = range.to();
+
+        var fromState = getStateAt(fromPos);
+        var toState = getStateAt(toPos);
+        
+        console.log(fromState, toState);
+
+        // The selection may end outside a list, but must start inside a list,
+        // dtto for quote
+        var inList = fromState.list !== false;
+        var inQuote = fromState.quote !== 0;
+
+        // Get the first line's text and check if it's a list
+        var line = cm.getLine(fromPos.line), match = listRE.exec(line);
+
+        // -----------------------------------------
+        // In case line is NOT a list, ignore and quit
+        if (/*!range.empty() ||*/ (!inList && !inQuote) || !match) {
+            console.log("No list, bailing out");
+            return undefined;
+        }
+        
+        // -----------------------------------------
+        // Everything is OK, so perform one of the following
+        // - continue list
+        // - decrease indent
+        // - remove bullet and insert blank line
+
+        // First we have to check if it's time to decrease indent,
+        // i.e. selection starts right after bullet and ends at an eol (even of different line)
+        var endLine = cm.getLine(toPos.line);
+        if ((fromPos.ch == match[0].length) && (toPos.ch == endLine.length)) {
+            console.log("Pressed Return right after bullet");
+            if (fromState.indentation > 0) {
+                console.log("Decreasing indent");
+                cm.indentLine(fromPos.line, "subtract");
+                return "";
+            }
+            else {
+                cm.replaceRange("", 
+                                { line: fromPos.line, ch: 0 }, 
+                                { line: toPos.line, ch: toPos.ch + 1 });    // Not sure why the +1
+                return "\n";
+            } 
+        }
+        else {
+            var indent = match[1], after = match[5];
+            var bullet = unorderedListRE.test(match[2]) || match[2].indexOf(">") >= 0
+            ? match[2]
+            : (parseInt(match[3], 10) + 1) + match[4];
+
+            return "\n" + indent + bullet + after;
+        }
+        
+    };
 
 });
