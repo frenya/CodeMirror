@@ -84,7 +84,7 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
 
   var hrRE = /^([*\-_])(?:\s*\1){2,}\s*$/
   ,   ulRE = /^[*\-+]\s+/
-  ,   olRE = /^[0-9]+([.)])\s+/
+  ,   olRE = /^([0-9]+)([.)])\s+/
   ,   taskListRE = /^\[(x| )\](?=\s)/ // Must follow ulRE or olRE
   ,   atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
   ,   setextHeaderRE = /^ *(?:\={1,}|-{1,})\s*$/
@@ -121,6 +121,10 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
     state.quote = 0;
     // Reset state.indentedCode
     state.indentedCode = false;
+    // Reset list information
+    state.listDepth = 0;
+    state.listOrder = null;
+    state.list = false;
     if (!htmlFound && state.f == htmlBlock) {
       state.f = inlineNormal;
       state.block = blockNormal;
@@ -155,6 +159,7 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         state.list = false;
       }
       state.listDepth = Math.floor(state.indentation / 4);
+      state.listOrder = null;
     }
 
     var match = null;
@@ -700,6 +705,7 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         taskList: false,
         list: false,
         listDepth: 0,
+        listOrder: null,
         quote: 0,
         trailingSpace: 0,
         trailingSpaceNewLine: false,
@@ -735,6 +741,7 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         taskList: s.taskList,
         list: s.list,
         listDepth: s.listDepth,
+        listOrder: s.listOrder,
         quote: s.quote,
         indentedCode: s.indentedCode,
         trailingSpace: s.trailingSpace,
