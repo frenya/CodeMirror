@@ -719,11 +719,12 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         f: s.f,
 
         prevLine: s.prevLine,
-        thisLine: s.this,
+        thisLine: s.thisLine,
 
         block: s.block,
         htmlState: s.htmlState && CodeMirror.copyState(htmlMode, s.htmlState),
         indentation: s.indentation,
+        indentationDiff: s.indentationDiff,
 
         localMode: s.localMode,
         localState: s.localMode ? CodeMirror.copyState(s.localMode, s.localState) : null,
