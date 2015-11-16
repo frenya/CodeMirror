@@ -1,6 +1,66 @@
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: http://codemirror.net/LICENSE
 
+/*                 
+
+-   f  (function used to return next token)
+    -   inlineNormal
+    -   state.inline
+    -   state.block
+    -   local
+    -   leavingLocal
+    -   linkHref
+    -   linkInline
+    -   getLinkHrefInside(ch === "(" ? ")" : "]")
+    -   footnoteLink
+    -   footnoteLinkInside
+    -   footnoteUrl
+    
+-   block (used only as value for .f at times, checked for htmlBlock value at times)
+    -   blockNormal
+    -   local
+    -   leavingLocal
+    -   htmlBlock
+
+-   thisLine - either null or this line's stream
+-   prevLine - either null or previous value of thisLine
+
+-   htmlState - state of the HTML parser
+
+-   indentation - indentation (in spaces) of the current line, rounded to multiples of 4, does not count bullet or indented code's spaces
+-   indentationDiff - difference (in spaces) against previous line
+-   listDepth - basically (indentation / 4)
+
+-   list
+    -   true for the bullet point token
+    -   null anywhere else on the list's line
+    -   false if not a list at all
+    -   NOTE: Hence the use of the (state.list !== false) condition
+
+    localMode: s.localMode,
+    localState: s.localMode ? CodeMirror.copyState(s.localMode, s.localState) : null,
+
+    inline: s.inline,
+    text: s.text,
+    formatting: false,
+    linkTitle: s.linkTitle,
+    code: s.code,
+    em: s.em,
+    strong: s.strong,
+    strikethrough: s.strikethrough,
+    header: s.header,
+    hr: s.hr,
+    taskList: s.taskList,
+    list: s.list,
+    quote: s.quote,
+    indentedCode: s.indentedCode,
+    trailingSpace: s.trailingSpace,
+    trailingSpaceNewLine: s.trailingSpaceNewLine,
+    md_inside: s.md_inside,
+    fencedChars: s.fencedChars
+
+*/
+
 (function(mod) {
   if (typeof exports == "object" && typeof module == "object") // CommonJS
     mod(require("../../lib/codemirror"));
