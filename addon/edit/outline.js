@@ -77,49 +77,6 @@
       unorderedListRE = /[*+-]\s/,
       emptyLineRE = /^(\s*)$/;
 
-    CodeMirror.commands.indentMarkdownListMore = function(cm) {
-
-        if (cm.getOption("disableInput")) return CodeMirror.Pass;
-
-        // doc.listSelections():
-        // Retrieves a list of all current selections. These will always be sorted, and never overlap (overlapping selections are merged). 
-        // Each object in the array contains anchor and head properties referring to {line, ch} objects.
-        var ranges = cm.listSelections(), replacements = [];
-
-        // Go over all the selected lines
-        for (var i = 0; i < ranges.length; i++) {
-            // First line of the selection
-            var pos = ranges[i].head;
-
-            // Check the state AFTER the line
-            var eolState = cm.getStateAfter(pos.line);
-            var inList = eolState.list !== false;
-            var inQuote = eolState.quote !== 0;
-
-            // Debug
-            var eolStatePrev = cm.getStateAfter(pos.line - 1);
-            console.log("Indentation: " + eolStatePrev.indentation + ", diff: " + eolStatePrev.indentationDiff + ", indent: " + eolStatePrev.indent);
-            console.log(eolStatePrev);
-            console.log(eolState);
-
-            // Get the line's text and check if it's a list
-            var line = cm.getLine(pos.line), match = listRE.exec(line);
-            
-            if (emptyLineRE.exec(line)) {
-                console.log("Starting new list");
-                replacements[i] = "-\t";     // TODO: Probably there's a function generating proper tab size
-            }
-            else if (match) {
-                console.log("Increasing list indent");
-                cm.execCommand("indentMore");
-                return;
-            }
-            else return CodeMirror.Pass;
-        }
-
-        cm.replaceSelections(replacements);
-    };
-
     CodeMirror.commands.newlineAndIndentContinueMarkdownList = function(cm) {
 
         if (cm.getOption("disableInput")) return CodeMirror.Pass;
