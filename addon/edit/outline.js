@@ -209,6 +209,12 @@
             if (fromState.indentation > 0) {
                 console.log("Decreasing indent");
                 cm.indentLine(fromPos.line, "subtract");
+
+                // Readjust numbered prefixes
+                var anchorLine = findListAnchor(cm, fromPos.line);
+                console.log("Adjusting prefixes from " + anchorLine);
+                adjustNumberedPrefixes(cm, anchorLine, false);
+
                 return "";
             }
             else {
@@ -228,6 +234,53 @@
         }
         
     };
+    
+    CodeMirror.commands.indentMarkdownListTab = function(cm) {
+
+        if (cm.getOption("disableInput")) return CodeMirror.Pass;
+
+        // doc.listSelections():
+        // Retrieves a list of all current selections. These will always be sorted, and never overlap (overlapping selections are merged). 
+        // Each object in the array contains anchor and head properties referring to {line, ch} objects.
+        var ranges = cm.listSelections(), replacements = [];
+
+        // Go over all the selected lines
+        for (var i = 0; i < ranges.length; i++) {
+            // First line of the selection
+            var pos = ranges[i].head;
+
+            // Check the state AFTER the line
+            var eolState = cm.getStateAfter(pos.line);
+            var inList = eolState.list !== false;
+            var inQuote = eolState.quote !== 0;
+
+            // Debug
+            var eolStatePrev = cm.getStateAfter(pos.line - 1);
+            console.log("Indentation: " + eolStatePrev.indentation + ", diff: " + eolStatePrev.indentationDiff + ", indent: " + eolStatePrev.indent);
+            console.log(eolStatePrev);
+            console.log(eolState);
+
+            // Get the line's text and check if it's a list
+            var line = cm.getLine(pos.line), match = listRE.exec(line);
+
+            if (match) {
+                console.log("Increasing list indent");
+                cm.execCommand("indentMore");
+                
+                // Readjust numbered prefixes
+                var anchorLine = findListAnchor(cm, pos.line);
+                console.log("Adjusting prefixes from " + anchorLine);
+                adjustNumberedPrefixes(cm, anchorLine, false);
+                
+                return;
+            }
+            else return CodeMirror.Pass;
+        }
+
+        cm.replaceSelections(replacements);
+        
+    };
+
 
     // --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
     // Supporting functions
@@ -250,5 +303,88 @@
 
     }
 
+    function getStateAtLine(line, cm) {
+        
+        var state = cm.getStateAfter(line, true);
+        if (state.overlay) state = state.base;
+        return state;
+
+    }
+    
+    /**
+     * @param cm CodeMirror instance
+     * @param lineStart Line number of the first line to adjust
+     */
+    function adjustNumberedPrefixes(cm, lineStart, resetNumbering) {
+        
+        var state = getStateAtLine(lineStart, cm);
+        var currentDepth = state.listDepth;
+        var currentOrder = resetNumbering ? 1 : state.listOrder;
+
+        // Init cycle variables
+        var nextLine = lineStart;
+        var nextOrder = currentOrder;
+        
+        // Go through all the lines until indent is lower or end of file
+        while (nextLine < cm.lineCount()) {
+            // console.log("Checking line " + nextLine);
+            // console.log("Comparing depth", state.listDepth, currentDepth);
+            if (state.listDepth === currentDepth) {
+                // If listOrder is filled (i.e. numbered list), make sure it has the right ordinal
+                if (state.listOrder != null && state.listOrder !== nextOrder) {
+                    // console.log("Should adjust numbered prefix at line " + nextLine + " from " + state.listOrder + " to " + nextOrder);
+                    resetNumberedPrefix(cm, nextLine, nextOrder);
+                }
+                nextLine++;
+                nextOrder++;
+            }
+            else if (state.listDepth > currentDepth) {
+                // console.log(">>>");
+                nextLine = adjustNumberedPrefixes(cm, nextLine, true);
+                // No change to order - still expecting the same number
+            }
+            else {
+                // console.log("<<<");
+                return nextLine;
+            }
+            state = getStateAtLine(nextLine, cm);
+        }
+        
+    }
+    
+    function resetNumberedPrefix(cm, lineNumber, newPrefix) {
+
+        // Get the line's text and parse the prefix
+        // TODO: Maybe do some checks to make sure we matched a proper number prefix
+        var lineText = cm.getLine(lineNumber), match = listRE.exec(lineText);
+        
+        // Find the range of the number in prefix and replace it
+        var prefixPos = match[1].length, prefixLen = match[3].length;
+        cm.replaceRange("" + newPrefix, 
+                        { line: lineNumber, ch: prefixPos }, 
+                        { line: lineNumber, ch: prefixPos + prefixLen });
+        
+    }
+    
+    function findListAnchor(cm, lineNumber) {
+        
+        var state = getStateAtLine(lineNumber, cm);
+        var currentDepth = state.listDepth;
+
+        // Init cycle variables
+        var nextLine = lineNumber - 1;
+
+        // Go through all the lines until indent is lower or end of file
+        while (nextLine > 0) {
+            state = getStateAtLine(nextLine, cm);
+            // console.log("Checking line " + nextLine);
+            // console.log("Comparing depth", state.listDepth, currentDepth);
+            if (state.listDepth < currentDepth) break;
+            nextLine--;
+        }
+        
+        return nextLine;
+
+    }
 
 });
