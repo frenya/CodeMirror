@@ -151,11 +151,10 @@ CodeMirror.defineMode("markdown", function(cmCfg, modeCfg) {
         state.list = null;
       } else if (state.indentation > 0) {
         state.list = null;
-        state.listDepth = Math.floor(state.indentation / 4);
       } else { // No longer a list
         state.list = false;
-        state.listDepth = 0;
       }
+      state.listDepth = Math.floor(state.indentation / 4);
     }
 
     var match = null;
